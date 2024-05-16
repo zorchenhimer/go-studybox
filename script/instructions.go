@@ -17,8 +17,14 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0x81, 0, 0, 0,  "halt"},
 	&Instruction{ 0x82, 0, 0, 0,  "tape_nmi_shenanigans"},
 	&Instruction{ 0x83, 0, 0, 0,  "tape_wait"},
+
+	// Jump to the inline word, in the VM
 	&Instruction{ 0x84, 0, 2, 0,  "jump_abs"},
+
+	// Call a routine at the inline word, in the VM
 	&Instruction{ 0x85, 0, 2, 0,  "call_abs"},
+
+	// Return from a previous call
 	&Instruction{ 0x86, 0, 0, 0,  "return"},
 	&Instruction{ 0x87, 0, 0, 0,  "loop"},
 	&Instruction{ 0x88, 0, 0, 0,  "play_sound"},
@@ -35,7 +41,9 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0x92, 0, 0, 1,  "string_less_than_equal"},
 	&Instruction{ 0x93, 0, 0, 1,  "string_greater_than_equal"},
 	&Instruction{ 0x94, 0, 0, 1,  "string_greater_than"},
-	&Instruction{ 0x95, 1, 0, 0,  ""},
+
+	// Sets some tape NMI stuff if the byte at $0740 is not zero.
+	&Instruction{ 0x95, 1, 0, 0,  "tape_nmi_shenigans_set"},
 	&Instruction{ 0x96, 0, 2, 0,  "set_word_4E"},
 	&Instruction{ 0x97, 2, 0, 0,  ""},
 	&Instruction{ 0x98, 1, 0, 0,  ""},
@@ -50,11 +58,17 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xA0, 2, 0, 1,  ""},
 	&Instruction{ 0xA1, 1, 0, 0,  ""},
 	&Instruction{ 0xA2, 1, 0, 0,  "buffer_palette"},
-	&Instruction{ 0xA3, 1, 0, 0,  ""},
+
+	// Possibly a sprite setup routine.  loads up some CHR data and some palette
+	// data.
+	&Instruction{ 0xA3, 1, 0, 0,  "sprite_setup"},
 	&Instruction{ 0xA4, 3, 0, 0,  ""},
 	&Instruction{ 0xA5, 1, 0, 0,  "set_470A"},
 	&Instruction{ 0xA6, 1, 0, 0,  "set_470B"},
-	&Instruction{ 0xA7, 0, 0, 0,  "call_asm"}, // built-in ACE, lmao
+
+	// jump to the inline address, in assembly, not in the VM
+	// (built-in ACE, lmao)
+	&Instruction{ 0xA7, 0, 0, 0,  "call_asm"},
 	&Instruction{ 0xA8, 5, 0, 0,  ""},
 	&Instruction{ 0xA9, 1, 0, 0,  ""},
 	&Instruction{ 0xAA, 1, 0, 0,  ""},
@@ -71,22 +85,32 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xB4, 0, 0, 0,  ""},
 	&Instruction{ 0xB5, 0, 0, 0,  ""},
 	&Instruction{ 0xB6, 0, 0, 0,  ""},
-	&Instruction{ 0xB7, 0, 2, 0,  "deref_ptr"},
+
+	// Uses the inline word as a pointer, and pushes the byte value at that
+	// address to the stack.
+	&Instruction{ 0xB7, 0, 2, 0,  "deref_ptr_inline"},
+
+	// Pushes the inline word to the stack
 	&Instruction{ 0xB8, 0, 2, 0,  "push_word"},
 	&Instruction{ 0xB9, 0, 2, 0,  "push_word_indexed"},
 	&Instruction{ 0xBA, 0, 2, 0,  "push"},
 	&Instruction{ 0xBB, 0, -1, 0, "push_data"},
 	&Instruction{ 0xBC, 0, 2, 0,  "push_string_from_table"},
+
+	// Pops a byte off the stack and stores it at the inline address.
 	&Instruction{ 0xBD, 0, 2, 0,  "pop"},
 	&Instruction{ 0xBE, 0, 2, 0,  "write_to_table"},
 	&Instruction{ 0xBF, 0, 2, 0,  "jump_not_zero"},
 
+	// One byte off stack; jumps to inline if byte is zero
 	&Instruction{ 0xC0, 1, 2, 0,  "jump_zero"},
 	&Instruction{ 0xC1, 1, -2, 0, "jump_switch"},
 	&Instruction{ 0xC2, 1, 0, 1,  "equals_zero"},
 	&Instruction{ 0xC3, 2, 0, 1,  "and_a_b"},
 	&Instruction{ 0xC4, 2, 0, 1,  "or_a_b"},
 	&Instruction{ 0xC5, 2, 0, 1,  "equal"},
+
+	// Two bytes off stack; result pushed back; 1 if A == B, 0 if A != B
 	&Instruction{ 0xC6, 2, 0, 1,  "not_equal"},
 	&Instruction{ 0xC7, 2, 0, 1,  "less_than"},
 	&Instruction{ 0xC8, 2, 0, 1,  "less_than_equal"},
@@ -118,7 +142,10 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xE0, 2, 0, 1,  "signed_divide"},
 	&Instruction{ 0xE1, 4, 0, 0,  ""},
 	&Instruction{ 0xE2, 7, 0, 0,  "setup_sprite"},
-	&Instruction{ 0xE3, 1, 0, 1,  "get_byte_at_arg_a"},
+
+	// Pops a word off the stack, uses it as a pointer, and pushes the byte
+	// value at that address to the stack.
+	&Instruction{ 0xE3, 1, 0, 1,  "deref_ptr_stack"},
 	&Instruction{ 0xE4, 2, 0, 0,  "swap_ram_bank"},
 	&Instruction{ 0xE5, 1, 0, 0,  "disable_sprite"},
 	&Instruction{ 0xE6, 1, 0, 0,  "tape_nmi_setup"},
@@ -129,7 +156,7 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xEB, 4, 0, 0,  ""},
 	&Instruction{ 0xEC, 2, 0, 0,  "scroll"},
 	&Instruction{ 0xED, 1, 0, 0,  "disable_sprites"},
-	&Instruction{ 0xEE, 1, -3, 0,  "call_switch"},
+	&Instruction{ 0xEE, 1, -3, 0, "call_switch"},
 	&Instruction{ 0xEF, 6, 0, 0,  ""},
 
 	&Instruction{ 0xF0, 0, 0, 0,  "disable_sprites"},
@@ -147,7 +174,9 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xFC, 2, 0, 1,  ""},
 	&Instruction{ 0xFD, 0, 0, 16, "halt"},
 	&Instruction{ 0xFE, 4, 0, 0,  ""},
-	&Instruction{ 0xFF, 0, 0, 0,  "break_engine"}, // code handler is $FFFF
+
+	// code handler is $FFFF
+	&Instruction{ 0xFF, 0, 0, 0,  "break_engine"},
 }
 
 type Instruction struct {
