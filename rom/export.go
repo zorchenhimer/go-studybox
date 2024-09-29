@@ -13,6 +13,10 @@ func (sb *StudyBox) Export(directory string) error {
 		Audio:   directory + "/audio" + sb.Audio.ext(),
 	}
 
+	// A "Page" here does not correspond to the entered "Page" number on the
+	// title screen.  These are really segments.  The "Page" that is entered on
+	// the title screen is stored in the header of a segment.  Multiple
+	// segments can have the same "Page" number.
 	for pidx, page := range sb.Data.Pages {
 		jp := jsonPage{
 			AudioOffsetLeadIn: page.AudioOffsetLeadIn,
@@ -20,7 +24,7 @@ func (sb *StudyBox) Export(directory string) error {
 			Data:              []jsonData{},
 		}
 
-		file, err := os.Create(fmt.Sprintf("%s/page%02d_0000.txt", directory, pidx))
+		file, err := os.Create(fmt.Sprintf("%s/segment-%02d_packet-0000.txt", directory, pidx))
 		if err != nil {
 			return err
 		}
@@ -74,13 +78,13 @@ func (sb *StudyBox) Export(directory string) error {
 
 				switch jData.Type {
 				case "pattern":
-					jData.File = fmt.Sprintf("%s/page%02d_%04d_chrData.chr", directory, pidx, dataStartId)
+					jData.File = fmt.Sprintf("%s/segment-%02d_packet-%04d_chrData.chr", directory, pidx, dataStartId)
 
 				case "nametable":
-					jData.File = fmt.Sprintf("%s/page%02d_%04d_ntData.dat", directory, pidx, dataStartId)
+					jData.File = fmt.Sprintf("%s/segment-%02d_packet-%04d_ntData.dat", directory, pidx, dataStartId)
 
 				case "script":
-					jData.File = fmt.Sprintf("%s/page%02d_%04d_scriptData.dat", directory, pidx, dataStartId)
+					jData.File = fmt.Sprintf("%s/segment-%02d_packet-%04d_scriptData.dat", directory, pidx, dataStartId)
 
 					//script, err := DissassembleScript(scriptData)
 					//if err != nil {
@@ -118,7 +122,7 @@ func (sb *StudyBox) Export(directory string) error {
 				rawData = append(rawData, p.Data...)
 
 			default:
-				return fmt.Errorf("Encountered an unknown packet: %s page: %d", p.Asm(), pidx)
+				return fmt.Errorf("Encountered an unknown packet: %s segment: %d", p.Asm(), pidx)
 			}
 		}
 

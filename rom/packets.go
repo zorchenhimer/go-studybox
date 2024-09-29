@@ -26,7 +26,7 @@ func (ph *packetHeader) RawBytes() []byte {
 }
 
 func (ph *packetHeader) Asm() string {
-	return fmt.Sprintf("header %d ; Checksum: %02X", ph.PageNumber, ph.Checksum)
+	return fmt.Sprintf("header %d [Page %d] ; Checksum: %02X", ph.PageNumber, ph.PageNumber+1, ph.Checksum)
 }
 
 func (ph *packetHeader) Address() int {
@@ -81,7 +81,7 @@ func newPacketWorkRamLoad(bank, addressHigh uint8) *packetWorkRamLoad {
 }
 
 func (p *packetWorkRamLoad) Asm() string {
-	return fmt.Sprintf("work_ram_load $%02X $%02X ; Checksum %02X",
+	return fmt.Sprintf("work_ram_load bank:$%02X addr:$%02X00 ; Checksum %02X",
 		p.bankId, p.loadAddressHigh, p.checksum)
 }
 
@@ -192,7 +192,7 @@ func (p *packetMarkDataStart) Address() int {
 
 type packetMarkDataEnd struct {
 	//Arg   uint8
-	Reset bool
+	Reset bool // what does this mean?  what is special about the value 0xF0?
 	Type  uint8
 
 	address  int
@@ -251,7 +251,8 @@ func (p *packetMarkDataEnd) Asm() string {
 	for _, b := range p.RawBytes() {
 		s = append(s, fmt.Sprintf("%02X", b))
 	}
-	return fmt.Sprintf("mark_datatype_end %s ; %s Checksum: %02X", tstr, strings.Join(s, " "), p.checksum)
+	return fmt.Sprintf("mark_datatype_end %s ; %s Checksum: %02X",
+		tstr, strings.Join(s, " "), p.checksum)
 }
 
 func (p *packetMarkDataEnd) Address() int {

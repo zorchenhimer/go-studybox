@@ -10,17 +10,18 @@ import (
 // Returns packet, next state, and error (if any)
 type decodeFunction func(page *Page, data []byte, startIdx int) (Packet, int, error)
 
-// map of states.  each state is a map of types
+// Map of states.  Each state is a map of types
 var definedPackets = map[int]map[byte]decodeFunction{
-	0: map[byte]decodeFunction{
+
+	0: map[byte]decodeFunction{ // state 3 in firmware.org
 		0x01: decodeHeader,
 	},
 
-	1: map[byte]decodeFunction{
+	1: map[byte]decodeFunction{ // state 1 in firmware.org
 		0x00: decodeMarkDataEnd,
 	},
 
-	2: map[byte]decodeFunction{
+	2: map[byte]decodeFunction{ // state 2 in firmware.org
 		0x02: decodeSetWorkRamLoad,
 		0x03: decodeMarkDataStart,
 		0x04: decodeMarkDataStart,
@@ -45,18 +46,19 @@ func (page *Page) decode(data []byte) error {
 			return nil
 		}
 
+		stateArg := data[idx+1]
 		var packet Packet
-		if page.state == 1 && data[idx+1] != 0x00 {
+		if page.state == 1 && stateArg != 0x00 {  // stateArg is length here?
 			// bulk data
 			packet, page.state, err = decodeBulkData(page, data, idx)
 			if err != nil {
 				return err
 			}
 		} else {
-			df, ok := definedPackets[page.state][data[idx+1]]
+			df, ok := definedPackets[page.state][stateArg]
 			if !ok {
 				return fmt.Errorf("State %d packet with type %02X isn't implemented",
-					page.state, data[idx+1])
+					page.state, stateArg)
 			}
 			packet, page.state, err = df(page, data, idx)
 			if err != nil {
@@ -149,7 +151,7 @@ func decodeMarkDataStart(page *Page, data []byte, idx int) (Packet, int, error) 
 func decodeMarkDataEnd(page *Page, data []byte, idx int) (Packet, int, error) {
 	packet := &packetMarkDataEnd{
 		Type:     data[idx+2],
-		Reset:    (data[idx+2]&0xF0 == 0xF0),
+		Reset:    (data[idx+2]&0xF0 == 0xF0),  // what is this?
 		checksum: data[idx+3],
 		address:  page.DataOffset + idx,
 	}
@@ -195,6 +197,9 @@ func decodeSetWorkRamLoad(page *Page, data []byte, idx int) (Packet, int, error)
 }
 
 func decodeBulkData(page *Page, data []byte, idx int) (Packet, int, error) {
+	// idx+1: length of data
+	// idx+2: data start
+
 	if data[idx+1] == 0 {
 		return nil, 0, fmt.Errorf("Bulk data packet has a length of zero at offset %08X",
 			page.DataOffset+idx)
@@ -206,8 +211,9 @@ func decodeBulkData(page *Page, data []byte, idx int) (Packet, int, error) {
 
 	datalen := int(data[idx+1])
 	packet.Data = data[idx+2 : idx+2+datalen]
-	packet.checksum = data[idx+len(packet.Data)+2]
+	packet.checksum = data[idx+2+len(packet.Data)]
 
+	// checksum includes the packet ID and data length values
 	checksum := calcChecksum(data[idx : idx+int(data[idx+1])+2])
 	if checksum != packet.checksum {
 		data := []string{}
