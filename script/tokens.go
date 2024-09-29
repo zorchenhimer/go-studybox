@@ -9,12 +9,13 @@ type Token struct {
 	Offset   int
 	Raw      byte
 	Inline   []InlineVal
-	IsTarget bool // target of a call/jump?
+	IsTarget bool   // target of a call/jump?
+	IsVariable bool // target of something else
 
 	Instruction *Instruction
 }
 
-func (t Token) String() string {
+func (t Token) String(labels map[int]string) string {
 	suffix := ""
 	switch t.Raw {
 	case 0x86:
@@ -22,8 +23,12 @@ func (t Token) String() string {
 	}
 
 	prefix := ""
-	if t.IsTarget {
-		prefix = fmt.Sprintf("\nL%04X:\n", t.Offset)
+	if t.IsTarget || t.IsVariable {
+		if lbl, ok := labels[t.Offset]; ok {
+			prefix = "\n"+lbl+":\n"
+		} else {
+			prefix = fmt.Sprintf("\nL%04X:\n", t.Offset)
+		}
 	}
 
 	if t.Raw < 0x80 {
@@ -50,18 +55,26 @@ func (t Token) String() string {
 
 	argstr := []string{}
 	for _, a := range t.Inline {
-		argstr = append(argstr, a.HexString())
+		if lbl, ok := labels[a.Int()]; ok {
+			argstr = append(argstr, lbl)
+		} else {
+			argstr = append(argstr, a.HexString())
+		}
 	}
 
 	bytestr := []string{}
 	for _, a := range t.Inline {
 		for _, b := range a.Bytes() {
-			bytestr = append(bytestr, fmt.Sprintf("%02X", b))
+			//if lbl, ok := labels[a.Int()]; ok {
+			//	bytestr = append(bytestr, lbl)
+			//} else {
+				bytestr = append(bytestr, fmt.Sprintf("%02X", b))
+			//}
 		}
 	}
 
 	switch t.Raw {
-	case 0xBB:
+	case 0xBB: // push_data
 		bs := []byte{}
 		for _, val := range t.Inline {
 			bs = append(bs, val.Bytes()...)

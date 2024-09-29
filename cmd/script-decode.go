@@ -58,7 +58,7 @@ func run(args *Arguments) error {
 	fmt.Fprintf(outfile, "; Stack address: $%04X\n\n", scr.StackAddress)
 
 	for _, token := range scr.Tokens {
-		fmt.Fprintln(outfile, token)
+		fmt.Fprintln(outfile, token.String(scr.Labels))
 	}
 
 	return nil

@@ -1,8 +1,9 @@
 .PHONY: all
 
-COMMANDS: bin/script-decode
+all: bin/script-decode bin/sbutil
 
-all: $(COMMANDS)
+bin/script-decode: cmd/script-decode.go script/*.go
+	go build -o $@ $<
 
-bin/%: cmd/%.go script/*.go
+bin/sbutil: cmd/sbutil.go rom/*.go
 	go build -o $@ $<

@@ -24,7 +24,9 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 		Warnings: []string{},
 		StackAddress: (int(rawinput[1])<<8) | int(rawinput[0]),
 		StartAddress: startAddr,
+		Labels: make(map[int]string), // map[location]name
 	}
+	tokenMap := make(map[int]*Token)
 
 	for i := 2; i < len(rawinput); i++ {
 		raw := rawinput[i]
@@ -35,6 +37,7 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 			Inline: []InlineVal{},
 		}
 		script.Tokens = append(script.Tokens, token)
+		tokenMap[token.Offset] = token
 
 		if raw < 0x80 {
 			continue
@@ -102,6 +105,7 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 				if tok.Offset == addr {
 					tok.IsTarget = true
 					found = true
+					script.Labels[addr] = fmt.Sprintf("L%04X", addr)
 					break
 				}
 			}
@@ -122,12 +126,26 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 					if tok.Offset == addr {
 						tok.IsTarget = true
 						found = true
+						script.Labels[addr] = fmt.Sprintf("L%04X", addr)
 						break
 					}
 				}
 
 				if !found {
 					script.Warnings = append(script.Warnings, fmt.Sprintf("Warning: no target found for jump/call switch at offset $%04X; value: $%04X", t.Offset, addr))
+				}
+			}
+
+		default:
+			// if word arg, see if it's something in this script
+			if t.Instruction == nil {
+				continue
+			}
+			if t.Instruction.OpCount == 2 {
+				addr := t.Inline[0].Int()
+				if tok, ok := tokenMap[addr]; ok {
+					tok.IsVariable = true
+					script.Labels[addr] = fmt.Sprintf("Var_%04X", addr)
 				}
 			}
 		}

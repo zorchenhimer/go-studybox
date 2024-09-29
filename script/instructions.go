@@ -52,6 +52,8 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0x9B, 0, 0, 0,  "halt"},
 	&Instruction{ 0x9C, 0, 0, 0,  "toggle_44FE"},
 	&Instruction{ 0x9D, 2, 0, 0,  "something_tape"},
+
+	// Calls 0xEB draw_overlay.  Seems to draw a whole screen.
 	&Instruction{ 0x9E, 2, 0, 0,  ""},
 	&Instruction{ 0x9F, 6, 0, 0,  ""},
 
@@ -135,7 +137,14 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xDA, 1, 0, 16, "to_int_string"},
 	&Instruction{ 0xDB, 3, 0, 0,  ""},
 	&Instruction{ 0xDC, 5, 0, 0,  ""},
-	&Instruction{ 0xDD, 5, 0, 0,  ""},
+
+	// ArgA, ArgB: X,Y of corner A
+	// ArgC, ArgD: X,Y of corner B
+	// ArgE: fill value.  This is an index into
+	//       the table at $B451.
+	// Fills a box with a tile
+	&Instruction{ 0xDD, 5, 0, 0,  "fill_box"},
+
 	&Instruction{ 0xDE, 3, 0, 0,  ""},
 	&Instruction{ 0xDF, 3, 0, 0,  ""},
 
@@ -153,7 +162,14 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xE8, 1, 0, 0,  "setup_tape_nmi"},
 	&Instruction{ 0xE9, 0, 1, 0,  "setup_loop"},
 	&Instruction{ 0xEA, 0, 0, 0,  "string_write_to_table"},
-	&Instruction{ 0xEB, 4, 0, 0,  ""},
+
+	// Reads and saves tiles from the PPU, then draws over them.
+	// This is used to draw dialog boxes, so saving what it overwrites
+	// so it can re-draw them later makes sense.
+	// Not sure what the arguments actually mean.
+	// ArgB and ArgC are probably coordinates.
+	&Instruction{ 0xEB, 4, 0, 0,  "draw_overlay"},
+
 	&Instruction{ 0xEC, 2, 0, 0,  "scroll"},
 	&Instruction{ 0xED, 1, 0, 0,  "disable_sprites"},
 	&Instruction{ 0xEE, 1, -3, 0, "call_switch"},

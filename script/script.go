@@ -9,4 +9,6 @@ type Script struct {
 
 	StartAddress int
 	StackAddress int
+
+	Labels map[int]string
 }
