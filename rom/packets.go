@@ -26,7 +26,8 @@ func (ph *packetHeader) RawBytes() []byte {
 }
 
 func (ph *packetHeader) Asm() string {
-	return fmt.Sprintf("header %d [Page %d] ; Checksum: %02X", ph.PageNumber, ph.PageNumber+1, ph.Checksum)
+	return fmt.Sprintf("header %d [Page %d] ; Checksum: %02X",
+		ph.PageNumber, ph.PageNumber+1, ph.Checksum)
 }
 
 func (ph *packetHeader) Address() int {
@@ -127,7 +128,8 @@ func (p *packetBulkData) Asm() string {
 	//	data = append(data, fmt.Sprintf("$%02X", b))
 	//}
 	//return fmt.Sprintf("[%08X] data %s ; Length %d Checksum: %02X", p.address, strings.Join(data, ", "), len(p.Data), p.checksum)
-	return fmt.Sprintf("data $%02X, [...], $%02X ; Length %d Checksum: %02X", p.Data[0], p.Data[len(p.Data)-1], len(p.Data), p.checksum)
+	return fmt.Sprintf("data $%02X, [...], $%02X ; Length:%d Checksum:%02X",
+		p.Data[0], p.Data[len(p.Data)-1], len(p.Data), p.checksum)
 }
 
 func (p *packetBulkData) RawBytes() []byte {
@@ -178,7 +180,7 @@ func (p *packetMarkDataStart) dataType() string {
 }
 
 func (p *packetMarkDataStart) Asm() string {
-	return fmt.Sprintf("mark_datatype_start %s $%02X $%02X ; Checksum: %02X",
+	return fmt.Sprintf("mark_datatype_start Type:%s ArgA:$%02X ArgB:$%02X ; Checksum:%02X",
 		p.dataType(), p.ArgA, p.ArgB, p.checksum)
 }
 
@@ -229,30 +231,31 @@ func (p *packetMarkDataEnd) RawBytes() []byte {
 }
 
 func (p *packetMarkDataEnd) Asm() string {
-	var tstr string
+	var typeStr string
 	switch p.Type & 0x0F {
 	case 2:
-		tstr = "script"
+		typeStr = "script"
 	case 3:
-		tstr = "nametable"
+		typeStr = "nametable"
 	case 4:
-		tstr = "pattern"
+		typeStr = "pattern"
 	case 5:
-		tstr = "delay"
+		typeStr = "delay"
 	default:
-		tstr = fmt.Sprintf("unknown $%02X", p.Type)
+		typeStr = fmt.Sprintf("unknown $%02X", p.Type)
 	}
 
 	if p.Reset {
-		tstr += " reset_state"
+		typeStr += " reset_state"
 	}
 
 	s := []string{}
 	for _, b := range p.RawBytes() {
 		s = append(s, fmt.Sprintf("%02X", b))
 	}
-	return fmt.Sprintf("mark_datatype_end %s ; %s Checksum: %02X",
-		tstr, strings.Join(s, " "), p.checksum)
+
+	return fmt.Sprintf("mark_datatype_end %s ; Raw:[%s] Checksum:%02X",
+		typeStr, strings.Join(s, " "), p.checksum)
 }
 
 func (p *packetMarkDataEnd) Address() int {
