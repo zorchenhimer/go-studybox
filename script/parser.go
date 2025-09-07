@@ -5,6 +5,42 @@ import (
 	"os"
 )
 
+type Label struct {
+	Address int
+	Name string
+	Comment string
+	FarLabel bool
+}
+
+func AutoLabel(address int) *Label {
+	return &Label{
+		Address: address,
+		Name: fmt.Sprintf("L%04X", address),
+	}
+}
+
+func AutoLabelVar(address int) *Label {
+	return &Label{
+		Address: address,
+		Name: fmt.Sprintf("Var_%04X", address),
+	}
+}
+
+func AutoLabelFar(address int) *Label {
+	return &Label{
+		Address: address,
+		Name: fmt.Sprintf("F%04X", address),
+		FarLabel: true,
+	}
+}
+
+func NewLabel(address int, name string) *Label {
+	return &Label{
+		Address: address,
+		Name: name,
+	}
+}
+
 func ParseFile(filename string, startAddr int) (*Script, error) {
 	rawfile, err := os.ReadFile(filename)
 	if err != nil {
@@ -24,7 +60,7 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 		Warnings: []string{},
 		StackAddress: (int(rawinput[1])<<8) | int(rawinput[0]),
 		StartAddress: startAddr,
-		Labels: make(map[int]string), // map[location]name
+		Labels: make(map[int]*Label), // map[location]name
 	}
 	tokenMap := make(map[int]*Token)
 
@@ -112,7 +148,7 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 				if tok.Offset == addr {
 					tok.IsTarget = true
 					found = true
-					script.Labels[addr] = fmt.Sprintf("L%04X", addr)
+					script.Labels[addr] = AutoLabel(addr) //fmt.Sprintf("L%04X", addr)
 					break
 				}
 			}
@@ -133,7 +169,7 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 					if tok.Offset == addr {
 						tok.IsTarget = true
 						found = true
-						script.Labels[addr] = fmt.Sprintf("L%04X", addr)
+						script.Labels[addr] = AutoLabel(addr) //fmt.Sprintf("L%04X", addr)
 						break
 					}
 				}
@@ -152,7 +188,7 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 				addr := t.Inline[0].Int()
 				if tok, ok := tokenMap[addr]; ok {
 					tok.IsVariable = true
-					script.Labels[addr] = fmt.Sprintf("Var_%04X", addr)
+					script.Labels[addr] = AutoLabelVar(addr) //fmt.Sprintf("Var_%04X", addr)
 				}
 			}
 		}

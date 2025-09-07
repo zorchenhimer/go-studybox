@@ -5,8 +5,11 @@ import (
 	"os"
 	"strings"
 	"strconv"
+	"bufio"
+	"slices"
 
 	"github.com/alexflint/go-arg"
+
 	"git.zorchenhimer.com/Zorchenhimer/go-studybox/script"
 )
 
@@ -14,6 +17,8 @@ type Arguments struct {
 	Input string `arg:"positional,required"`
 	Output string `arg:"positional"`
 	StartAddr string `arg:"--start" default:"0x6000" help:"base address for the start of the script"`
+	LabelFile string `arg:"--labels" help:"file containing address/label pairs"`
+
 	start int
 }
 
@@ -36,6 +41,18 @@ func run(args *Arguments) error {
 	scr, err := script.ParseFile(args.Input, args.start)
 	if err != nil {
 		return err
+	}
+
+	if args.LabelFile != "" {
+		labels, err := parseLabelFile(args.LabelFile)
+		if err != nil {
+			return err
+		}
+
+		for _, label := range labels {
+			//fmt.Printf("%#v\n", label)
+			scr.Labels[label.Address] = label
+		}
 	}
 
 	outfile := os.Stdout
@@ -62,6 +79,62 @@ func run(args *Arguments) error {
 	}
 
 	return nil
+}
+
+func parseLabelFile(filename string) ([]*script.Label, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	labels := []*script.Label{}
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		line = strings.ReplaceAll(line, "\t", " ")
+		parts := strings.Split(line, " ")
+
+		parts = slices.DeleteFunc(parts, func(str string) bool {
+			return str == ""
+		})
+
+		if len(parts) < 2 {
+			fmt.Println("Ignoring", line)
+			continue
+		}
+
+		if strings.HasPrefix(parts[0], "$") {
+			parts[0] = "0x"+parts[0][1:]
+		}
+
+		addr, err := strconv.ParseInt(parts[0], 0, 32)
+		if err != nil {
+			fmt.Printf("Address parse error for %q: %s\n", line, err)
+			continue
+		}
+
+		lbl := &script.Label{
+			Name: parts[1],
+			Address: int(addr),
+		}
+
+		if lbl.Name == "$" {
+			lbl.Name = ""
+		}
+
+		if len(parts) > 2 {
+			lbl.Comment = strings.Join(parts[2:], " ")
+		}
+
+		labels = append(labels, lbl)
+	}
+
+	return labels, nil
 }
 
 func main() {

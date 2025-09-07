@@ -15,7 +15,7 @@ type Token struct {
 	Instruction *Instruction
 }
 
-func (t Token) String(labels map[int]string) string {
+func (t Token) String(labels map[int]*Label) string {
 	suffix := ""
 	switch t.Raw {
 	case 0x86:
@@ -25,9 +25,17 @@ func (t Token) String(labels map[int]string) string {
 	prefix := ""
 	if t.IsTarget || t.IsVariable {
 		if lbl, ok := labels[t.Offset]; ok {
-			prefix = "\n"+lbl+":\n"
+			comment := ""
+			if lbl.Comment != "" {
+				comment = "; "+lbl.Comment+"\n"
+			}
+			prefix = "\n"+comment+lbl.Name+":\n"
 		} else {
 			prefix = fmt.Sprintf("\nL%04X:\n", t.Offset)
+		}
+	} else {
+		if lbl, ok := labels[t.Offset]; ok && lbl.Comment != "" {
+			suffix = " ; "+lbl.Comment+suffix
 		}
 	}
 
@@ -56,7 +64,7 @@ func (t Token) String(labels map[int]string) string {
 	argstr := []string{}
 	for _, a := range t.Inline {
 		if lbl, ok := labels[a.Int()]; ok {
-			argstr = append(argstr, lbl)
+			argstr = append(argstr, lbl.Name)
 		} else {
 			argstr = append(argstr, a.HexString())
 		}
