@@ -184,7 +184,8 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 			if t.Instruction == nil {
 				continue
 			}
-			if t.Instruction.OpCount == 2 {
+
+			if t.Instruction.OpCount == 2 && !t.Instruction.InlineImmediate {
 				addr := t.Inline[0].Int()
 				if tok, ok := tokenMap[addr]; ok {
 					tok.IsVariable = true
