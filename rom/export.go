@@ -106,7 +106,7 @@ func (sb *StudyBox) Export(directory string) error {
 					return fmt.Errorf("[WARN] unknown end data type: %s\n", jData.Type)
 				}
 
-				err = os.WriteFile(jData.File, rawData, 0777)
+				err = os.WriteFile(jData.File, rawData, 0666)
 				if err != nil {
 					return fmt.Errorf("Unable to write data to file [%q]: %v", jData.File, err)
 				}
@@ -143,5 +143,5 @@ func (sb *StudyBox) Export(directory string) error {
 		return err
 	}
 
-	return os.WriteFile(directory+".json", rawJson, 0777)
+	return os.WriteFile(directory+".json", rawJson, 0666)
 }

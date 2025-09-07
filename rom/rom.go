@@ -123,7 +123,7 @@ func (ta TapeAudio) String() string {
 
 func (ta *TapeAudio) WriteToFile(basename string) error {
 	ext := "." + strings.ToLower(string(ta.Format))
-	return os.WriteFile(basename+ext, ta.Data, 0777)
+	return os.WriteFile(basename+ext, ta.Data, 0666)
 }
 
 func (ta *TapeAudio) ext() string {
