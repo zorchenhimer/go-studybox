@@ -45,7 +45,7 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 
 		op, ok := InstrMap[raw]
 		if !ok {
-			return nil, fmt.Errorf("OP %02X not in instruction map", raw)
+			return nil, fmt.Errorf("OP 0x%02X not in instruction map", raw)
 		}
 		token.Instruction = op
 
@@ -66,19 +66,25 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 			args = append(args, ByteVal(l))
 			i++
 			for c := 0; c < l; c++ {
+				if len(rawinput) <= i+1 {
+					return script, fmt.Errorf("OP early end at offset 0x%X (%d) {%d} %#v", i, i, l, op)
+				}
+
 				args = append(args, WordVal([2]byte{rawinput[i], rawinput[i+1]}))
 				i+=2
 			}
+			i--
 
-		case -3: // count then count+1 words (extra is default case)
+		case -3: // count then count words.  "default" is no call (skip Code_Pointer to after args)
 			i++
 			l :=  int(rawinput[i])
 			args = append(args, ByteVal(l))
 			i++
-			for c := 0; c < l+1; c++ {
+			for c := 0; c < l; c++ {
 				args = append(args, WordVal([2]byte{rawinput[i], rawinput[i+1]}))
 				i+=2
 			}
+			i--
 
 		case 2:
 			args = append(args, WordVal([2]byte{rawinput[i+1], rawinput[i+2]}))
@@ -92,6 +98,7 @@ func Parse(rawinput []byte, startAddr int) (*Script, error) {
 		token.Inline = args
 	}
 
+	// Find and mark labels for a few instructions
 	for _, t := range script.Tokens {
 		switch t.Raw {
 		case 0x84, 0x85, 0xBF, 0xC0: // jmp/call
