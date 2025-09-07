@@ -17,6 +17,7 @@ type Arguments struct {
 	Input string `arg:"positional,required"`
 	Output string `arg:"positional"`
 	StartAddr string `arg:"--start" default:"0x6000" help:"base address for the start of the script"`
+	StatsFile string `arg:"--stats" help:"file to write some statistics to"`
 	LabelFile string `arg:"--labels" help:"file containing address/label pairs"`
 
 	start int
@@ -76,6 +77,20 @@ func run(args *Arguments) error {
 
 	for _, token := range scr.Tokens {
 		fmt.Fprintln(outfile, token.String(scr.Labels))
+	}
+
+	if args.StatsFile != "" {
+		statfile, err := os.Create(args.StatsFile)
+		if err != nil {
+			return fmt.Errorf("Unable to create stats file: %w", err)
+		}
+		defer statfile.Close()
+
+		//err = scr.WriteStats(statfile)
+		_, err = scr.Stats().WriteTo(statfile)
+		if err != nil {
+			return fmt.Errorf("Error writing stats: %w", err)
+		}
 	}
 
 	return nil
