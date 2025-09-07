@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func (sb *StudyBox) Export(directory string) error {
+func (sb *StudyBox) Export(directory string, includeAudio bool) error {
 	sbj := StudyBoxJson{
 		Version: 1,
 		Pages:   []jsonPage{},
@@ -133,9 +133,11 @@ func (sb *StudyBox) Export(directory string) error {
 		return fmt.Errorf("Missing audio!")
 	}
 
-	err := sb.Audio.WriteToFile(directory + "/audio")
-	if err != nil {
-		return fmt.Errorf("Error writing audio file: %v", err)
+	if includeAudio {
+		err := sb.Audio.WriteToFile(directory + "/audio")
+		if err != nil {
+			return fmt.Errorf("Error writing audio file: %v", err)
+		}
 	}
 
 	rawJson, err := json.MarshalIndent(sbj, "", "    ")
