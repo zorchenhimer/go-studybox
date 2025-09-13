@@ -9,6 +9,15 @@ import (
 
 type Stats map[byte]*InstrStat
 
+type InstrStat struct {
+	Instr *Instruction
+	Count int
+}
+
+func (is InstrStat) String() string {
+	return fmt.Sprintf("0x%02X %6d %s", is.Instr.Opcode, is.Count, is.Instr.String())
+}
+
 func (this Stats) Add(that Stats) {
 	for _, st := range that {
 		op := st.Instr.Opcode
@@ -40,7 +49,23 @@ func (s Stats) WriteTo(w io.Writer) (int64, error) {
 		}
 	}
 
-	n, err := fmt.Fprintln(w, "\nUnknown uses:", unknownUses)
+	n, err := fmt.Fprintln(w, "\nUnused OpCodes:")
+	count += int64(n)
+	if err != nil {
+		return count, err
+	}
+
+	for i := byte(0x80); i <= 0xFF && i >= 0x80; i++ {
+		if _, ok := s[i]; !ok {
+			n, err = fmt.Fprintf(w, "0x%02X %s\n", i, InstrMap[i].Name)
+			count += int64(n)
+			if err != nil {
+				return count, err
+			}
+		}
+	}
+
+	n, err = fmt.Fprintln(w, "\nUnknown uses:", unknownUses)
 	count += int64(n)
 	if err != nil {
 		return count, err

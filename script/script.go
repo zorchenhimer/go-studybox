@@ -1,7 +1,6 @@
 package script
 
 import (
-	"fmt"
 )
 
 type Script struct {
@@ -12,15 +11,6 @@ type Script struct {
 	StackAddress int
 
 	Labels map[int]*Label
-}
-
-type InstrStat struct {
-	Instr *Instruction
-	Count int
-}
-
-func (is InstrStat) String() string {
-	return fmt.Sprintf("0x%02X %3d %s", is.Instr.Opcode, is.Count, is.Instr.String())
 }
 
 func (s *Script) Stats() Stats {
