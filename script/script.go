@@ -11,6 +11,7 @@ type Script struct {
 	StackAddress int
 
 	Labels map[int]*Label
+	CDL *CodeDataLog
 }
 
 func (s *Script) Stats() Stats {

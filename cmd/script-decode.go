@@ -21,6 +21,7 @@ type Arguments struct {
 	StatsFile string `arg:"--stats" help:"file to write some statistics to"`
 	LabelFile string `arg:"--labels" help:"file containing address/label pairs"`
 	CDL string `arg:"--cdl" help:"CodeDataLog json file"`
+	CDLOutput string `arg:"--cdl-output"`
 	Smart bool `arg:"--smart"`
 
 	start int
@@ -103,10 +104,6 @@ func run(args *Arguments) error {
 		return 0
 	})
 
-	//for _, lbl := range scr.Labels {
-	//	fmt.Println(lbl)
-	//}
-
 	for _, token := range scr.Tokens {
 		fmt.Fprintln(outfile, token.String(scr.Labels))
 	}
@@ -121,6 +118,22 @@ func run(args *Arguments) error {
 		_, err = scr.Stats().WriteTo(statfile)
 		if err != nil {
 			return fmt.Errorf("Error writing stats: %w", err)
+		}
+	}
+
+	if scr.CDL != nil {
+		cdlout := args.CDL
+		if args.CDLOutput != "" {
+			cdlout = args.CDLOutput
+		}
+
+		if cdlout == "" {
+			return nil
+		}
+
+		err = scr.CDL.WriteToFile(cdlout)
+		if err != nil {
+			return fmt.Errorf("Error writing CDL file: %w", err)
 		}
 	}
 
