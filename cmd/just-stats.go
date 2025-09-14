@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"io/fs"
+	"slices"
 
 	"github.com/alexflint/go-arg"
 
@@ -19,6 +20,7 @@ type Arguments struct {
 
 type Walker struct {
 	Found []string
+	CDLs  []string
 }
 
 func (w *Walker) WalkFunc(path string, info fs.DirEntry, err error) error {
@@ -28,6 +30,10 @@ func (w *Walker) WalkFunc(path string, info fs.DirEntry, err error) error {
 
 	if strings.HasSuffix(path, "_scriptData.dat") {
 		w.Found = append(w.Found, path)
+	}
+
+	if strings.HasSuffix(path, "_scriptData.cdl.json") {
+		w.CDLs = append(w.CDLs, path)
 	}
 
 	return nil
@@ -46,17 +52,31 @@ func run(args *Arguments) error {
 
 	for _, file := range w.Found {
 		fmt.Println(file)
-		scr, err := script.ParseFile(file, 0x0000)
-		if err != nil {
-			if scr != nil {
-				for _, token := range scr.Tokens {
-					fmt.Println(token.String(scr.Labels))
-				}
+		var cdl *script.CodeDataLog
+		cdlname := file[:len(file)-4]+".cdl.json"
+		if slices.Contains(w.CDLs, cdlname) {
+			fmt.Println("", cdlname)
+			cdl, err = script.CdlFromJsonFile(cdlname)
+			if err != nil {
+				fmt.Println(" CDL read error:", err)
+				cdl = nil
 			}
-			return err
 		}
 
-		stats.Add(scr.Stats())
+		scr, err := script.SmartParseFile(file, 0x6000, cdl)
+		if err != nil {
+			//if scr != nil {
+			//	for _, token := range scr.Tokens {
+			//		fmt.Println(token.String(scr.Labels))
+			//	}
+			//}
+			fmt.Println(err)
+			//return err
+		}
+
+		if scr != nil {
+			stats.Add(scr.Stats())
+		}
 	}
 
 	outfile, err := os.Create(args.Output)

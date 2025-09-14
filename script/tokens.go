@@ -6,11 +6,12 @@ import (
 )
 
 type Token struct {
-	Offset   int
+	Offset   int // in CPU space
 	Raw      byte
 	Inline   []InlineVal
 	IsTarget bool   // target of a call/jump?
 	IsVariable bool // target of something else
+	IsData     bool // from CDL
 
 	Instruction *Instruction
 }
@@ -18,28 +19,24 @@ type Token struct {
 func (t Token) String(labels map[int]*Label) string {
 	suffix := ""
 	switch t.Raw {
-	case 0x86:
+	case 0x86: // Newline after return
 		suffix = "\n"
 	}
 
 	prefix := ""
-	if t.IsTarget || t.IsVariable {
-		if lbl, ok := labels[t.Offset]; ok {
-			comment := ""
-			if lbl.Comment != "" {
-				comment = "; "+lbl.Comment+"\n"
-			}
-			prefix = "\n"+comment+lbl.Name+":\n"
-		} else {
-			prefix = fmt.Sprintf("\nL%04X:\n", t.Offset)
+	if lbl, ok := labels[t.Offset]; ok {
+		comment := ""
+		if lbl.Comment != "" {
+			comment = "; "+lbl.Comment+"\n"
 		}
-	} else {
-		if lbl, ok := labels[t.Offset]; ok && lbl.Comment != "" {
-			suffix = " ; "+lbl.Comment+suffix
+		name := ""
+		if lbl.Name != "" {
+			name = lbl.Name+":\n"
 		}
+		prefix = "\n"+comment+name
 	}
 
-	if t.Raw < 0x80 {
+	if t.Instruction == nil {
 		return fmt.Sprintf("%s[%04X] %02X %-5s : %d%s",
 			prefix,
 			t.Offset,

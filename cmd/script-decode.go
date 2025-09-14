@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"bufio"
 	"slices"
+	"errors"
 
 	"github.com/alexflint/go-arg"
 
@@ -19,6 +20,8 @@ type Arguments struct {
 	StartAddr string `arg:"--start" default:"0x6000" help:"base address for the start of the script"`
 	StatsFile string `arg:"--stats" help:"file to write some statistics to"`
 	LabelFile string `arg:"--labels" help:"file containing address/label pairs"`
+	CDL string `arg:"--cdl" help:"CodeDataLog json file"`
+	Smart bool `arg:"--smart"`
 
 	start int
 }
@@ -39,19 +42,38 @@ func run(args *Arguments) error {
 
 	args.start = int(val)
 
-	scr, err := script.ParseFile(args.Input, args.start)
+	var cdl *script.CodeDataLog
+	if args.CDL != "" {
+		//fmt.Println("  CDL:", args.CDL)
+		cdl, err = script.CdlFromJsonFile(args.CDL)
+		if err != nil {
+			//return fmt.Errorf("CDL Parse error: %w", err)
+			cdl = nil
+		}
+	}
+
+	var scr *script.Script
+	if args.Smart {
+		scr, err = script.SmartParseFile(args.Input, args.start, cdl)
+	} else {
+		scr, err = script.ParseFile(args.Input, args.start, cdl)
+	}
+
 	if err != nil {
-		return err
+		if errors.Is(err, script.ErrEarlyEOF) || errors.Is(err, script.ErrNavigation) {
+			fmt.Println(err)
+		} else {
+			return fmt.Errorf("Script parse error: %w", err)
+		}
 	}
 
 	if args.LabelFile != "" {
 		labels, err := parseLabelFile(args.LabelFile)
 		if err != nil {
-			return err
+			return fmt.Errorf("Labels parse error: %w", err)
 		}
 
 		for _, label := range labels {
-			//fmt.Printf("%#v\n", label)
 			scr.Labels[label.Address] = label
 		}
 	}
@@ -66,7 +88,7 @@ func run(args *Arguments) error {
 	}
 
 	for _, w := range scr.Warnings {
-		fmt.Fprintln(os.Stderr, w)
+		//fmt.Fprintln(os.Stderr, w)
 		if args.Output != "" {
 			fmt.Fprintln(outfile, "; "+w)
 		}
@@ -74,6 +96,16 @@ func run(args *Arguments) error {
 
 	fmt.Fprintf(outfile, "; Start address: $%04X\n", scr.StartAddress)
 	fmt.Fprintf(outfile, "; Stack address: $%04X\n\n", scr.StackAddress)
+
+	slices.SortFunc(scr.Tokens, func(a, b *script.Token) int {
+		if a.Offset < b.Offset { return -1 }
+		if a.Offset > b.Offset { return 1 }
+		return 0
+	})
+
+	//for _, lbl := range scr.Labels {
+	//	fmt.Println(lbl)
+	//}
 
 	for _, token := range scr.Tokens {
 		fmt.Fprintln(outfile, token.String(scr.Labels))
@@ -86,7 +118,6 @@ func run(args *Arguments) error {
 		}
 		defer statfile.Close()
 
-		//err = scr.WriteStats(statfile)
 		_, err = scr.Stats().WriteTo(statfile)
 		if err != nil {
 			return fmt.Errorf("Error writing stats: %w", err)
