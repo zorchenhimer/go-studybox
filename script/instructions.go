@@ -30,7 +30,7 @@ var Instructions []*Instruction = []*Instruction{
 
 	&Instruction{ 0x87, 0, 0, 0,  false, "loop"},
 	&Instruction{ 0x88, 0, 0, 0,  false, "play_sound"},
-	&Instruction{ 0x89, 3, 0, 0,  false, ""},
+	&Instruction{ 0x89, 3, 0, 0,  false, "draw_string"},
 	&Instruction{ 0x8A, 0, 2, 0,  false, "pop_string_to_addr"},
 	&Instruction{ 0x8B, 1, 0, 0,  false, ""},
 	&Instruction{ 0x8C, 0, 0, 1,  false, "string_length"},
@@ -83,30 +83,48 @@ var Instructions []*Instruction = []*Instruction{
 
 	&Instruction{ 0xA8, 5, 0, 0,  false,  ""},
 	&Instruction{ 0xA9, 1, 0, 0,  false,  ""},
-	&Instruction{ 0xAA, 1, 0, 0,  false,  ""},
+	&Instruction{ 0xAA, 1, 0, 0,  false,  "long_jump"},
 	&Instruction{ 0xAB, 1, 0, 0,  false,  "long_call"},
 	&Instruction{ 0xAC, 0, 0, 0,  false,  "long_return"},
 	&Instruction{ 0xAD, 1, 0, 1,  false,  "absolute"},
 	&Instruction{ 0xAE, 1, 0, 1,  false,  "compare"},
-	&Instruction{ 0xAF, 0, 0, 1,  false,  ""},
+	&Instruction{ 0xAF, 0, 0, 1,  false,  "string_to_arg_a"},
 
-	&Instruction{ 0xB0, 1, 0, 16, false, ""},
+	&Instruction{ 0xB0, 1, 0, 16, false, "arg_a_to_string"},
 	&Instruction{ 0xB1, 1, 0, 16, false, "to_hex_string"},
 	&Instruction{ 0xB2, 0, 0, 1,  false,  ""},
 	&Instruction{ 0xB3, 7, 0, 0,  false,  ""}, // possible 16-bit inline?
-	&Instruction{ 0xB4, 0, 0, 0,  false,  ""},
-	&Instruction{ 0xB5, 0, 0, 0,  false,  ""},
-	&Instruction{ 0xB6, 0, 0, 0,  false,  ""},
+
+	// If ($471A) is > #$60, copy to ($4E).  Setup for some other bullshit?
+	&Instruction{ 0xB4, 0, 0, 0,  false,  "indirect_copy_471A_4E"},
+
+	// Uses value at $471A as the source pointer (after copied into ArgumentA)
+	// and $4E as the destination pointer to copy a null-terminated string.
+	// Will break if the string is more than 256 bytes long (incl NULL byte).
+	// The value at $471A will be incremented by the number of bytes copied.
+	&Instruction{ 0xB5, 0, 0, 0,  false,  "string_copy"},
+
+	// find a better name for this one.
+	&Instruction{ 0xB6, 0, 0, 0,  false,  "word4E_to_word471A"},
 
 	// Uses the inline word as a pointer, and pushes the byte value at that
 	// address to the stack.
-	&Instruction{ 0xB7, 0, 2, 0,  false,  "deref_ptr_inline"},
+	&Instruction{ 0xB7, 0, 2, 0,  false,  "push_var"},
 
 	// Pushes the inline word to the stack
 	&Instruction{ 0xB8, 0, 2, 0,  true,  "push_word"},
-	&Instruction{ 0xB9, 0, 2, 0,  false, "push_word_indexed"},
-	&Instruction{ 0xBA, 0, 2, 0,  false, "push"},
+
+	// Pushes value at (inline address + word offset in stack)
+	&Instruction{ 0xB9, 0, 2, 0,  false, "push_var_indexed"},
+
+	// Pushes data using inline value as pointer.  Always reads 32 bytes at the
+	// address given.
+	&Instruction{ 0xBA, 0, 2, 0,  false, "push_data_indirect"},
+
+	// Pushes inline null terminated data to the stack.  Max of 32 bytes.
+	// Increments the stack pointer by 32 *always*, regardless of data size.
 	&Instruction{ 0xBB, 0, -1, 0, false, "push_data"},
+
 	&Instruction{ 0xBC, 0, 2, 0,  false, "push_string_from_table"},
 
 	// Pops a byte off the stack and stores it at the inline address.
@@ -147,8 +165,12 @@ var Instructions []*Instruction = []*Instruction{
 
 	&Instruction{ 0xD6, 1, 0, 16, false,  "truncate_string"},
 	&Instruction{ 0xD7, 1, 0, 16, false,  "trim_string"},
-	&Instruction{ 0xD8, 1, 0, 16, false,  "trim_string_start"},
+
+	// ArgA is number of bytes to trim.
+	// ArgB is length of string.  0xD8 sets this to 32.
+	&Instruction{ 0xD8, 1, 0, 16, false,  "trim_string_start_32"},
 	&Instruction{ 0xD9, 2, 0, 16, false,  "trim_string_start"},
+
 	&Instruction{ 0xDA, 1, 0, 16, false,  "to_int_string"},
 	&Instruction{ 0xDB, 3, 0, 0,  false,  ""},
 	&Instruction{ 0xDC, 5, 0, 0,  false,  ""},
