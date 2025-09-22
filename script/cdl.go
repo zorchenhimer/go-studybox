@@ -13,8 +13,10 @@ type CodeDataLog struct {
 	Code []CdlRange
 	Data []CdlRange
 
+	EntryPoints []string
+
+	entries []int
 	cache map[int]cdlBit
-	offset int
 }
 
 type CdlRange struct {
@@ -32,6 +34,26 @@ var (
 	//cdlOpCode  cdlBit = 0x04
 )
 
+func (c cdlBit) String() string {
+	switch c {
+	case cdlUnknown:
+		return "UNKN"
+	case cdlCode:
+		return "CODE"
+	case cdlData:
+		return "DATA"
+	default:
+		return "????"
+	}
+}
+
+func NewCDL() *CodeDataLog {
+	return &CodeDataLog{
+		entries: []int{},
+		cache: make(map[int]cdlBit),
+	}
+}
+
 func (cdl *CodeDataLog) WriteToFile(filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
@@ -45,6 +67,10 @@ func (cdl *CodeDataLog) WriteToFile(filename string) error {
 	}
 
 	return werr
+}
+
+func (cdl *CodeDataLog) getEntries() []int {
+	return cdl.entries
 }
 
 func getRanges(list []int) []CdlRange {
@@ -102,6 +128,10 @@ func (cdl *CodeDataLog) WriteTo(w io.Writer) (int64, error) {
 	data := []int{}
 
 	for _, k := range keys {
+		if k < 0x6000 {
+			continue
+		}
+
 		b := cdl.cache[k]
 		if b & cdlCode == cdlCode {
 			code = append(code, k)
@@ -115,6 +145,10 @@ func (cdl *CodeDataLog) WriteTo(w io.Writer) (int64, error) {
 	clean.Code = getRanges(code)
 	clean.Data = getRanges(data)
 
+	for _, ent := range cdl.entries {
+		clean.EntryPoints = append(clean.EntryPoints, fmt.Sprintf("0x%X", ent))
+	}
+
 	raw, err := json.MarshalIndent(clean, "", "\t")
 	if err != nil {
 		return 0, err
@@ -124,26 +158,12 @@ func (cdl *CodeDataLog) WriteTo(w io.Writer) (int64, error) {
 	return int64(n), err
 }
 
-func (cdl *CodeDataLog) setData(scriptOffset int) {
-	if cdl.cache == nil {
-		err := cdl.doCache()
-		if err != nil {
-			panic(fmt.Sprintf("CDL data error: %w", err))
-		}
-	}
-
-	cdl.cache[scriptOffset+cdl.offset] |= cdlData
+func (cdl *CodeDataLog) setData(addr int) {
+	cdl.cache[addr] |= cdlData
 }
 
-func (cdl *CodeDataLog) setCode(scriptOffset int) {
-	if cdl.cache == nil {
-		err := cdl.doCache()
-		if err != nil {
-			panic(fmt.Sprintf("CDL data error: %w", err))
-		}
-	}
-
-	cdl.cache[scriptOffset+cdl.offset] |= cdlCode
+func (cdl *CodeDataLog) setCode(addr int) {
+	cdl.cache[addr] |= cdlCode
 }
 
 func (cdl *CodeDataLog) doCache() error {
@@ -161,10 +181,6 @@ func (cdl *CodeDataLog) doCache() error {
 		}
 
 		for i := int(start); i <= int(end); i++ {
-			if _, ok := cdl.cache[i]; !ok {
-				cdl.cache[i] = cdlUnknown
-			}
-
 			cdl.cache[i] |= cdlCode
 		}
 	}
@@ -181,24 +197,33 @@ func (cdl *CodeDataLog) doCache() error {
 		}
 
 		for i := int(start); i <= int(end); i++ {
-			if _, ok := cdl.cache[i]; !ok {
-				cdl.cache[i] = cdlUnknown
-			}
-
 			cdl.cache[i] |= cdlData
 		}
+	}
+
+	cdl.entries = []int{}
+	for _, ent := range cdl.EntryPoints {
+		addr, err := strconv.ParseInt(ent, 0, 32)
+		if err != nil {
+			return fmt.Errorf("Invalid entry point: %q", ent)
+		}
+
+		cdl.entries = append(cdl.entries, int(addr))
 	}
 
 	return nil
 }
 
 func CdlFromJson(r io.Reader) (*CodeDataLog, error) {
-	cdl := &CodeDataLog{}
+	cdl := NewCDL()
 	dec := json.NewDecoder(r)
 	err := dec.Decode(cdl)
 	if err != nil {
 		return nil, err
 	}
+
+	//cdl.Data = []CdlRange{}
+	cdl.doCache()
 
 	return cdl, nil
 }
@@ -213,13 +238,6 @@ func CdlFromJsonFile(filename string) (*CodeDataLog, error) {
 }
 
 func (cdl *CodeDataLog) IsData(addr int) bool {
-	if cdl.cache == nil {
-		err := cdl.doCache()
-		if err != nil {
-			panic(fmt.Sprintf("CDL data error: %w", err))
-		}
-	}
-
 	val, ok := cdl.cache[addr]
 	if !ok {
 		return false
@@ -229,13 +247,6 @@ func (cdl *CodeDataLog) IsData(addr int) bool {
 }
 
 func (cdl *CodeDataLog) IsCode(addr int) bool {
-	if cdl.cache == nil {
-		err := cdl.doCache()
-		if err != nil {
-			panic(fmt.Sprintf("CDL data error: %w", err))
-		}
-	}
-
 	val, ok := cdl.cache[addr]
 	if !ok {
 		return false

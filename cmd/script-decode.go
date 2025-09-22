@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 	"strconv"
-	"bufio"
 	"slices"
 	"errors"
 
@@ -23,6 +22,7 @@ type Arguments struct {
 	CDL string `arg:"--cdl" help:"CodeDataLog json file"`
 	CDLOutput string `arg:"--cdl-output"`
 	Smart bool `arg:"--smart"`
+	NoAddrPrefix bool `arg:"--no-addr-prefix"`
 
 	start int
 }
@@ -45,10 +45,13 @@ func run(args *Arguments) error {
 
 	var cdl *script.CodeDataLog
 	if args.CDL != "" {
-		//fmt.Println("  CDL:", args.CDL)
 		cdl, err = script.CdlFromJsonFile(args.CDL)
 		if err != nil {
-			//return fmt.Errorf("CDL Parse error: %w", err)
+			if errors.Is(err, os.ErrNotExist) {
+				fmt.Println("WARN: CDL file doesn't exist")
+			} else {
+				return fmt.Errorf("CDL Parse error: %w", err)
+			}
 			cdl = nil
 		}
 	}
@@ -69,14 +72,24 @@ func run(args *Arguments) error {
 	}
 
 	if args.LabelFile != "" {
-		labels, err := parseLabelFile(args.LabelFile)
+		err = scr.LabelsFromJsonFile(args.LabelFile)
+		//labels, err := parseLabelFile(args.LabelFile)
 		if err != nil {
-			return fmt.Errorf("Labels parse error: %w", err)
+			if errors.Is(err, os.ErrNotExist) {
+				fmt.Println("WARN: Label file doesn't exist")
+			} else {
+				return fmt.Errorf("Labels parse error: %w", err)
+			}
 		}
 
-		for _, label := range labels {
-			scr.Labels[label.Address] = label
+		err = scr.WriteLabelsToFile(args.LabelFile)
+		if err != nil {
+			return fmt.Errorf("Labels write error: %w", err)
 		}
+
+		//for _, label := range labels {
+		//	scr.Labels[label.Address] = label
+		//}
 	}
 
 	outfile := os.Stdout
@@ -105,7 +118,7 @@ func run(args *Arguments) error {
 	})
 
 	for _, token := range scr.Tokens {
-		fmt.Fprintln(outfile, token.String(scr.Labels))
+		fmt.Fprintln(outfile, token.String(scr.Labels, args.NoAddrPrefix))
 	}
 
 	if args.StatsFile != "" {
@@ -135,65 +148,14 @@ func run(args *Arguments) error {
 		if err != nil {
 			return fmt.Errorf("Error writing CDL file: %w", err)
 		}
+
+		err = scr.DebugCDL(cdlout+".dbg")
+		if err != nil {
+			return fmt.Errorf("Error writing CDL debug file: %w", err)
+		}
 	}
 
 	return nil
-}
-
-func parseLabelFile(filename string) ([]*script.Label, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	labels := []*script.Label{}
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		line = strings.ReplaceAll(line, "\t", " ")
-		parts := strings.Split(line, " ")
-
-		parts = slices.DeleteFunc(parts, func(str string) bool {
-			return str == ""
-		})
-
-		if len(parts) < 2 {
-			fmt.Println("Ignoring", line)
-			continue
-		}
-
-		if strings.HasPrefix(parts[0], "$") {
-			parts[0] = "0x"+parts[0][1:]
-		}
-
-		addr, err := strconv.ParseInt(parts[0], 0, 32)
-		if err != nil {
-			fmt.Printf("Address parse error for %q: %s\n", line, err)
-			continue
-		}
-
-		lbl := &script.Label{
-			Name: parts[1],
-			Address: int(addr),
-		}
-
-		if lbl.Name == "$" {
-			lbl.Name = ""
-		}
-
-		if len(parts) > 2 {
-			lbl.Comment = strings.Join(parts[2:], " ")
-		}
-
-		labels = append(labels, lbl)
-	}
-
-	return labels, nil
 }
 
 func main() {

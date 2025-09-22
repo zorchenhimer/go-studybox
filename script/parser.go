@@ -54,6 +54,7 @@ func SmartParse(rawinput []byte, startAddr int, cdl *CodeDataLog) (*Script, erro
 			Labels: make(map[int]*Label), // map[location]name
 
 			CDL: cdl,
+			origSize: len(rawinput),
 		},
 
 		rawinput: rawinput,
@@ -61,17 +62,28 @@ func SmartParse(rawinput []byte, startAddr int, cdl *CodeDataLog) (*Script, erro
 	}
 
 	if p.script.CDL == nil {
-		p.script.CDL = &CodeDataLog{}
+		p.script.CDL = NewCDL()
 	}
 
 	tokenMap := make(map[int]*Token)
 
 	// starting point is the third byte in the script.
 	branches := []int{ 2 }
+	for _, ent := range p.script.CDL.getEntries() {
+		addr := ent-startAddr
+		if addr > 0 {
+			branches = append(branches, addr)
+		}
+	}
+
+
 	visited := make([]bool, len(p.rawinput))
 
 	for len(branches) > 0 {
-		//fmt.Printf("start @ $%04X\n", branches[0]+startAddr)
+		st := branches[0]+startAddr
+		//fmt.Printf("start @ $%04X\n", st)
+		p.script.Labels[st] = AutoLabel(st)
+
 INNER:
 		for p.current = branches[0]; p.current < len(p.rawinput); p.current++ {
 			//branches = branches[1:]
@@ -99,7 +111,7 @@ INNER:
 
 			//fmt.Printf("{$%04X} %s\n", token.Offset, token.String(map[int]*Label{}))
 
-			p.script.CDL.setCode(p.current)
+			p.script.CDL.setCode(p.current+p.startAddr)
 			if raw < 0x80 {
 				continue
 			}
@@ -112,7 +124,7 @@ INNER:
 			//fmt.Println(token.String(map[int]*Label{}))
 
 			switch raw {
-			case 0x86, 0xAC, 0xFF, 0x81, 0x9B, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xFD: // return, long_return, break_engine & halts
+			case 0x86, 0xAC, 0xAA, 0xFF, 0x81, 0x9B, 0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF7, 0xF8, 0xFD: // return, long_return, long_jump, break_engine & halts
 				//fmt.Printf("[$%04X] %s\n",
 				//	token.Offset, token.Instruction.Name)
 				break INNER
@@ -162,11 +174,13 @@ INNER:
 				}
 			}
 
-			if token.Instruction.OpCount == 2 {
+			if token.Instruction.OpCount == 2 && !token.Instruction.InlineImmediate {
 				val := token.Inline[0].Int()
-				if _, ok := p.script.Labels[val]; !ok {
+				if _, ok := p.script.Labels[val]; !ok {//&& val >= startAddr {
 					p.script.Labels[val] = AutoLabelVar(val)
 				}
+				p.script.CDL.setData(val)
+				p.script.CDL.setData(val+1)
 			}
 		}
 
@@ -174,6 +188,40 @@ INNER:
 			break
 		}
 		branches = branches[1:]
+	}
+
+	// Add data tokens
+	for addr, bit := range p.script.CDL.cache {
+		if addr < 0x6002 {
+			continue
+		}
+
+		// ignore code bytes
+		if bit & cdlCode == cdlCode {
+			continue
+		}
+
+		// ignore labels outside the script's address range
+		if addr > len(rawinput)+0x6000 {
+			continue
+		}
+
+		if _, ok := p.script.Labels[addr]; ok {
+			p.script.Tokens = append(p.script.Tokens, &Token{
+				Offset: addr,
+				Inline: []InlineVal{NewWordVal([]byte{rawinput[addr-0x6000], rawinput[addr+1-0x6000]})},
+				IsVariable: true,
+				IsData: true,
+				cdl: bit.String(),
+			})
+		} else {
+			p.script.Tokens = append(p.script.Tokens, &Token{
+				Offset: addr,
+				Raw: rawinput[addr-0x6000],
+				IsData: true,
+				cdl: bit.String(),
+			})
+		}
 	}
 
 	return p.script, nil
@@ -192,6 +240,7 @@ func Parse(rawinput []byte, startAddr int, cdl *CodeDataLog) (*Script, error) {
 			StartAddress: startAddr,
 			Labels: make(map[int]*Label), // map[location]name
 			CDL: cdl,
+			origSize: len(rawinput),
 		},
 		rawinput: rawinput,
 		startAddr: startAddr,
@@ -199,7 +248,7 @@ func Parse(rawinput []byte, startAddr int, cdl *CodeDataLog) (*Script, error) {
 	tokenMap := make(map[int]*Token)
 
 	if p.script.CDL == nil {
-		p.script.CDL = &CodeDataLog{}
+		p.script.CDL = NewCDL()
 	}
 
 	//earliestVar := len(p.rawinput)-2
@@ -302,8 +351,8 @@ func Parse(rawinput []byte, startAddr int, cdl *CodeDataLog) (*Script, error) {
 
 			if t.Instruction.OpCount == 2 && !t.Instruction.InlineImmediate {
 				addr := t.Inline[0].Int()
-				if tok, ok := tokenMap[addr]; ok {
-					tok.IsVariable = true
+				if _, ok := tokenMap[addr]; ok {
+					//tok.IsVariable = true
 					p.script.Labels[addr] = AutoLabelVar(addr) //fmt.Sprintf("Var_%04X", addr)
 				}
 			}
@@ -325,7 +374,7 @@ func (p *Parser) parseToken(token *Token, raw byte) error {
 	switch op.OpCount {
 	case -1: // null terminated
 		for ; p.current < len(p.rawinput); p.current++ {
-			p.script.CDL.setCode(p.current)
+			p.script.CDL.setCode(p.current+p.startAddr)
 			val := ByteVal(p.rawinput[p.current])
 			args = append(args, val)
 			if p.rawinput[p.current] == 0x00 {
@@ -336,10 +385,12 @@ func (p *Parser) parseToken(token *Token, raw byte) error {
 	case -2: // count then count words
 		// FIXME: wtf makes this different from -3??
 		p.current++
+
 		l :=  int(p.rawinput[p.current])
-		p.script.CDL.setCode(p.current)
+		p.script.CDL.setCode(p.current+p.startAddr)
 		args = append(args, ByteVal(l))
 		p.current++
+
 		for c := 0; c < l; c++ {
 			if len(p.rawinput) <= p.current+1 {
 				return errors.Join(ErrEarlyEOF,
@@ -347,26 +398,37 @@ func (p *Parser) parseToken(token *Token, raw byte) error {
 			}
 
 			args = append(args, WordVal([2]byte{p.rawinput[p.current], p.rawinput[p.current+1]}))
+			p.script.CDL.setCode(p.current+p.startAddr)
+			p.script.CDL.setCode(p.current+p.startAddr+1)
 			p.current+=2
 		}
 		p.current--
 
 	case -3: // count then count words.  "default" is no call (skip Code_Pointer to after args)
 		p.current++
+
 		l :=  int(p.rawinput[p.current])
 		args = append(args, ByteVal(l))
-		p.script.CDL.setCode(p.current)
+		p.script.CDL.setCode(p.current+p.startAddr)
 		p.current++
+
 		for c := 0; c < l; c++ {
+			if len(p.rawinput) <= p.current+1 {
+				return errors.Join(ErrEarlyEOF,
+					fmt.Errorf("OP early end at offset 0x%X (%d) {%d} %#v", p.current, p.current, l, op))
+			}
+
 			args = append(args, WordVal([2]byte{p.rawinput[p.current], p.rawinput[p.current+1]}))
+			p.script.CDL.setCode(p.current+p.startAddr)
+			p.script.CDL.setCode(p.current+p.startAddr+1)
 			p.current+=2
 		}
 		p.current--
 
 	case 2:
 		args = append(args, WordVal([2]byte{p.rawinput[p.current+1], p.rawinput[p.current+2]}))
-		p.script.CDL.setCode(p.current+1)
-		p.script.CDL.setCode(p.current+2)
+		p.script.CDL.setCode(p.current+p.startAddr+1)
+		p.script.CDL.setCode(p.current+p.startAddr+2)
 		p.current+=2
 
 		//fmt.Printf("var at $%04X\n", val.Int())
@@ -377,7 +439,7 @@ func (p *Parser) parseToken(token *Token, raw byte) error {
 
 	case 1:
 		p.current++
-		p.script.CDL.setCode(p.current)
+		p.script.CDL.setCode(p.current+p.startAddr)
 		args = append(args, ByteVal(p.rawinput[p.current]))
 	}
 
