@@ -30,7 +30,12 @@ var Instructions []*Instruction = []*Instruction{
 
 	&Instruction{ 0x87, 0, 0, 0,  false, "loop"},
 	&Instruction{ 0x88, 0, 0, 0,  false, "play_sound"},
+
+	// ArgA: Foreground color index
+	// ArgB: Background color index
+	// ArgC: Ignored??
 	&Instruction{ 0x89, 3, 0, 0,  false, "draw_string"},
+
 	&Instruction{ 0x8A, 0, 2, 0,  false, "pop_string_to_addr"},
 	&Instruction{ 0x8B, 1, 0, 0,  false, ""},
 	&Instruction{ 0x8C, 0, 0, 1,  false, "string_length"},
@@ -203,7 +208,7 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xE7, 7, 0, 0,  false,  "draw_metasprite"},
 	&Instruction{ 0xE8, 1, 0, 0,  false,  "setup_tape_nmi"},
 	&Instruction{ 0xE9, 0, 1, 0,  false,  "setup_loop"},
-	&Instruction{ 0xEA, 0, 0, 0,  false,  "string_write_to_table"},
+	&Instruction{ 0xEA, 0, 2, 0,  false,  "string_write_to_table"},
 
 	// Reads and saves tiles from the PPU, then draws over them.
 	// This is used to draw dialog boxes, so saving what it overwrites
@@ -216,7 +221,15 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xED, 1, 0, 0,  false,  "disable_sprites"},
 
 	&Instruction{ 0xEE, 1, -3, 0, false,  "call_switch"},
-	&Instruction{ 0xEF, 6, 0, 0,  false,  ""},
+
+	// Draw string as sprites
+	// ArgA: Palette ID
+	// ArgB: FG palette index
+	// ArgC: BG palette index
+	// ArgD: Priority (something else too?)
+	// ArgE: X coord
+	// ArgF: Y coord
+	&Instruction{ 0xEF, 6, 0, 0,  false,  "draw_string_sprites"},
 
 	&Instruction{ 0xF0, 0, 0, 0,  false,  "disable_sprites"},
 	&Instruction{ 0xF1, 4, 0, 0,  false,  ""},
