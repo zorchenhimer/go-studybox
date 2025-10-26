@@ -180,7 +180,7 @@ func (p *packetMarkDataStart) dataType() string {
 }
 
 func (p *packetMarkDataStart) Asm() string {
-	return fmt.Sprintf("mark_datatype_start Type:%s ArgA:$%02X ArgB:$%02X ; Checksum:%02X",
+	return fmt.Sprintf("mark_datatype_start Type:%s Bank:$%02X Addr:$%02X00 ; Checksum:%02X",
 		p.dataType(), p.ArgA, p.ArgB, p.checksum)
 }
 
