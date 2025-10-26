@@ -69,7 +69,25 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0x9F, 6, 0, 0,  false,  ""},
 
 	&Instruction{ 0xA0, 2, 0, 1,  false,  ""},
-	&Instruction{ 0xA1, 1, 0, 0,  false,  ""},
+
+	// Draw a screen from ROM.
+	// ArgA is screen index (ArgA <= 14)
+	// 00 - Window (used as the unit screens in the english tapes)
+	// 01 - bricks??
+	// 02 - Notebook (used for the mid-lesson quizes in the english tapes)
+	// 03 - Blimp (used after english lessons, before Gold Tomahawk)
+	// 04 - Map of USA (used in english tapes before final quiz)
+	// 05 - Green rounded title card (used in math/science)
+	// 06 - Orange rounded title card (used in math/science)
+	// 07 - Blue Triangle title card (used in a math tape)
+	// 08 - Blue Sci-fi title card (used in science tapes)
+	// 09 - Green block border (from here on don't seem to be used)
+	// 0A - Generic brick border
+	// 0B - Generic twist border
+	// 0C - Generic yellow embossed border
+	// 0D - Generic blue diamond border
+	// 0E - Generic brownish border
+	&Instruction{ 0xA1, 1, 0, 0,  false,  "load_rom_screen"},
 	&Instruction{ 0xA2, 1, 0, 0,  false,  "buffer_palette"},
 
 	// Possibly a sprite setup routine.  loads up some CHR data and some palette
@@ -194,6 +212,14 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xE0, 2, 0, 1,  false,  "modulo"},
 
 	&Instruction{ 0xE1, 4, 0, 0,  false,  ""},
+
+	// ArgA: Palette ID
+	// ArgB: FG palette index
+	// ArgC: BG palette index
+	// ArgD: Priority (something else too?)
+	// ArgE: X coord
+	// ArgF: Y coord
+	// ArgG: ??
 	&Instruction{ 0xE2, 7, 0, 0,  false,  "setup_sprite"},
 
 	// Pops a word off the stack, uses it as a pointer, and pushes the byte
@@ -229,7 +255,10 @@ var Instructions []*Instruction = []*Instruction{
 	// ArgD: Priority (something else too?)
 	// ArgE: X coord
 	// ArgF: Y coord
-	&Instruction{ 0xEF, 6, 0, 0,  false,  "draw_string_sprites"},
+	// THIS WORD WRAPS APPARENTLY?????
+	// Duplicate tiles are ignored and not displayed.  However, space is left
+	// for them as if they were.  Word wrapping adds 17 to the Y offset.
+	&Instruction{ 0xEF, 6, 0, 0,  false,  "draw_debug_sprites"},
 
 	&Instruction{ 0xF0, 0, 0, 0,  false,  "disable_sprites"},
 	&Instruction{ 0xF1, 4, 0, 0,  false,  ""},
