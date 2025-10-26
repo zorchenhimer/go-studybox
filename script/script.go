@@ -44,12 +44,12 @@ func (s *Script) DebugCDL(filename string) error {
 		return fmt.Errorf("origSize == 0")
 	}
 
-	if s.CDL.cache == nil {
-		err := s.CDL.doCache()
-		if err != nil {
-			return fmt.Errorf("doCache() error: %w", err)
-		}
-	}
+	//if s.CDL.cache == nil {
+	//	err := s.CDL.doCache()
+	//	if err != nil {
+	//		return fmt.Errorf("doCache() error: %w", err)
+	//	}
+	//}
 
 	dat := make([]byte, s.origSize)
 	for i := 2; i < len(dat); i++ {

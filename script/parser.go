@@ -191,26 +191,19 @@ INNER:
 	}
 
 	// Add data tokens
-	for addr, bit := range p.script.CDL.cache {
-		if addr < 0x6002 {
-			continue
-		}
+	for addr := 0x6002; addr < len(rawinput)+0x6000; addr++ {
+		bit := p.script.CDL.cache[addr]
 
 		// ignore code bytes
 		if bit & cdlCode == cdlCode {
 			continue
 		}
 
-		// ignore labels outside the script's address range
-		if addr > len(rawinput)+0x6000 {
-			continue
-		}
-
 		if _, ok := p.script.Labels[addr]; ok {
 			p.script.Tokens = append(p.script.Tokens, &Token{
 				Offset: addr,
-				Inline: []InlineVal{NewWordVal([]byte{rawinput[addr-0x6000], rawinput[addr+1-0x6000]})},
-				IsVariable: true,
+				//Inline: []InlineVal{NewWordVal([]byte{rawinput[addr-0x6000], rawinput[addr+1-0x6000]})},
+				//IsVariable: true,
 				IsData: true,
 				cdl: bit.String(),
 			})

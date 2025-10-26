@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"fmt"
 	"slices"
+	"bytes"
 )
 
 type CodeDataLog struct {
@@ -166,8 +167,11 @@ func (cdl *CodeDataLog) setCode(addr int) {
 	cdl.cache[addr] |= cdlCode
 }
 
-func (cdl *CodeDataLog) doCache() error {
+func (cdl *CodeDataLog) doCache(size int) error {
 	cdl.cache = make(map[int]cdlBit)
+	for i := 0x6000; i < size+0x6000; i++ {
+		cdl.cache[i] = cdlUnknown
+	}
 
 	for _, rng := range cdl.Code {
 		start, err := strconv.ParseInt(rng.Start, 0, 32)
@@ -215,15 +219,18 @@ func (cdl *CodeDataLog) doCache() error {
 }
 
 func CdlFromJson(r io.Reader) (*CodeDataLog, error) {
+	raw, err := io.ReadAll(r)
+	buf := bytes.NewReader(raw)
+
 	cdl := NewCDL()
-	dec := json.NewDecoder(r)
-	err := dec.Decode(cdl)
+	dec := json.NewDecoder(buf)
+	err = dec.Decode(cdl)
 	if err != nil {
 		return nil, err
 	}
 
 	//cdl.Data = []CdlRange{}
-	cdl.doCache()
+	cdl.doCache(len(raw))
 
 	return cdl, nil
 }
