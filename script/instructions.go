@@ -56,8 +56,8 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0x96, 0, 2, 0,  true,   "set_word_4E"},
 	&Instruction{ 0x97, 2, 0, 0,  false,  ""},
 	&Instruction{ 0x98, 1, 0, 0,  false,  ""},
-	&Instruction{ 0x99, 1, 0, 0,  false,  ""},
-	&Instruction{ 0x9A, 0, 0, 0,  false,  ""},
+	&Instruction{ 0x99, 1, 0, 0,  false,  "enable_audio"},
+	&Instruction{ 0x9A, 0, 0, 0,  false,  "disable_audio"},
 	&Instruction{ 0x9B, 0, 0, 0,  false,  "halt"},
 	&Instruction{ 0x9C, 0, 0, 0,  false,  "toggle_44FE"},
 
@@ -107,7 +107,10 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xA7, 0, 0, 0,  false,   "call_asm"},
 
 	&Instruction{ 0xA8, 5, 0, 0,  false,  ""},
-	&Instruction{ 0xA9, 1, 0, 0,  false,  ""},
+
+	// Used when redrawing a portion of the screen after drawing a box or
+	// some other image on top of the background.
+	&Instruction{ 0xA9, 1, 0, 0,  false,  "restore_tiles"},
 	&Instruction{ 0xAA, 1, 0, 0,  false,  "long_jump"},
 	&Instruction{ 0xAB, 1, 0, 0,  false,  "long_call"},
 	&Instruction{ 0xAC, 0, 0, 0,  false,  "long_return"},
@@ -117,7 +120,10 @@ var Instructions []*Instruction = []*Instruction{
 
 	&Instruction{ 0xB0, 1, 0, 16, false, "arg_a_to_string"},
 	&Instruction{ 0xB1, 1, 0, 16, false, "to_hex_string"},
-	&Instruction{ 0xB2, 0, 0, 1,  false,  ""},
+
+	// Reads the mic bit on $4016 and puts it on the stack
+	&Instruction{ 0xB2, 0, 0, 1,  false,  "read_mic"},
+
 	&Instruction{ 0xB3, 7, 0, 0,  false,  ""}, // possible 16-bit inline?
 
 	// If ($471A) is > #$60, copy to ($4E).  Setup for some other bullshit?
@@ -198,7 +204,7 @@ var Instructions []*Instruction = []*Instruction{
 
 	&Instruction{ 0xDA, 1, 0, 16, false,  "to_int_string"},
 	&Instruction{ 0xDB, 3, 0, 0,  false,  ""},
-	&Instruction{ 0xDC, 5, 0, 0,  false,  ""},
+	&Instruction{ 0xDC, 5, 0, 0,  false,  ""}, // fucks with attribute data
 
 	// ArgA, ArgB: X,Y of corner A
 	// ArgC, ArgD: X,Y of corner B
