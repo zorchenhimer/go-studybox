@@ -60,6 +60,8 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0x9A, 0, 0, 0,  false,  ""},
 	&Instruction{ 0x9B, 0, 0, 0,  false,  "halt"},
 	&Instruction{ 0x9C, 0, 0, 0,  false,  "toggle_44FE"},
+
+	// Waits for data from the tape then jumps into 0x9E code
 	&Instruction{ 0x9D, 2, 0, 0,  false,  "something_tape"},
 
 	// Calls 0xEB draw_overlay.  Draws the whole screen from data previously
@@ -206,7 +208,13 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0xDD, 5, 0, 0,  false,  "fill_box"},
 
 	&Instruction{ 0xDE, 3, 0, 0,  false,  ""},
-	&Instruction{ 0xDF, 3, 0, 0,  false,  ""},
+
+	// ArgA: ??
+	// ArgB: X (tile coords)
+	// ArgC: Y (tile coords)
+	// Draws an image on top of the background using data already
+	// loaded from *somewhere*. (seen using data from tape)
+	&Instruction{ 0xDF, 3, 0, 0,  false,  "draw_image"},
 
 	// Divide and return remainder
 	&Instruction{ 0xE0, 2, 0, 1,  false,  "modulo"},
