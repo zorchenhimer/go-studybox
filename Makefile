@@ -1,12 +1,10 @@
 .PHONY: all
 
-all: bin/script-decode bin/sbutil bin/just-stats
+all: bin/script-decode bin/sbutil bin/just-stats bin/extract-imgs
 
-bin/script-decode: cmd/script-decode.go script/*.go
-	go build -o $@ $<
+bin/script-decode: script/*.go
+bin/sbutil: rom/*.go
+bin/just-stats: script/*.go
 
-bin/sbutil: cmd/sbutil.go rom/*.go
-	go build -o $@ $<
-
-bin/just-stats: cmd/just-stats.go script/*.go
+bin/%: cmd/%.go
 	go build -o $@ $<
