@@ -114,7 +114,7 @@ func decodeDelay(page *Page, data []byte, idx int) (Packet, int, error) {
 		count++
 	}
 	if count%2 != 0 {
-		fmt.Printf("0xAA delay packet at offset %08X has odd number of 0xAA's", idx+page.FileOffset)
+		fmt.Printf("0xAA delay packet at offset %08X has odd number of 0xAA's\n", idx+page.FileOffset)
 	}
 	pd := &packetDelay{
 		Length:  count,
@@ -123,8 +123,10 @@ func decodeDelay(page *Page, data []byte, idx int) (Packet, int, error) {
 
 	checksum := calcChecksum(data[idx : idx+count+3])
 	if checksum != 0xC5 {
-		return nil, 0, fmt.Errorf("Invalid checksum for delay packet starting at offset %08X. Got %02X, expected %02X",
-			pd.address, checksum, 0xC5)
+	//	return nil, 0, fmt.Errorf("Invalid checksum for delay packet starting at offset %08X. Got %02X, expected %02X",
+	//		pd.address, checksum, 0xC5)
+		fmt.Printf("WARN: Invalid checksum for delay packet starting at offset %08X. Got %02X, expected %02X\n",
+				pd.address, checksum, 0xC5)
 	}
 
 	idx += count + 3
