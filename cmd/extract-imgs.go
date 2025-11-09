@@ -369,6 +369,26 @@ func ReadData(raw []byte, tiles []*nesimg.Tile, isSprites bool) ([]*Layer, error
 		layers = append(layers, l)
 	}
 
+	if offset != int(dataHeader.PaletteOffset) {
+		fmt.Printf("[[ offset != dataHeader.PaletteOffset: %04X != %04X ]]\n", offset, dataHeader.PaletteOffset)
+	}
+
+	// Looks like the data after the palettes is just padding?  If there's a non-zero
+	// byte in there, print a warning.
+	palend := int(dataHeader.PaletteOffset) + (8*4)
+	if palend < len(raw) {
+		nonzero := false
+		for i := palend; i < len(raw); i++ {
+			if raw[i] != 0x00 {
+				nonzero = true
+				break
+			}
+		}
+		if nonzero {
+			fmt.Printf("[[ %d bytes of extra data ]]\n", len(raw) - palend)
+		}
+	}
+
 	return layers, nil
 }
 
