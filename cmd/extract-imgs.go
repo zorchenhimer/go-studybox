@@ -414,12 +414,6 @@ func (l *Layer) At(x, y int) color.Color {
 
 	tileIdx := (row*l.Width)+col
 
-	if x == 89 && y == 101 {
-		fmt.Printf("row:%d col:%d tx:%d ty:%d tileIdx:%d width:%d height:%d l.Width:%d l.Height:%d\n",
-			row, col, tx, ty, tileIdx, width, height, l.Width, l.Height,
-		)
-	}
-
 	if l.Tiles[tileIdx] == nil {
 		return color.RGBA{0x00, 0x00, 0x00, 0x00}
 		//return color.RGBA{0xFF, 0x00, 0xFF, 0xFF}
