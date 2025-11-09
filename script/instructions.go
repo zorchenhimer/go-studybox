@@ -54,7 +54,12 @@ var Instructions []*Instruction = []*Instruction{
 	&Instruction{ 0x95, 1, 0, 0,  false,  "tape_nmi_shenigans_set"},
 
 	&Instruction{ 0x96, 0, 2, 0,  true,   "set_word_4E"},
-	&Instruction{ 0x97, 2, 0, 0,  false,  ""},
+
+	// Seen loading two screens that are scrolled across
+	// horizontally and vertically.
+	// ArgB seems to control horizontal vs vertical, but only #%0000_0010?
+	&Instruction{ 0x97, 2, 0, 0,  false,  "load_two_screens"},
+
 	&Instruction{ 0x98, 1, 0, 0,  false,  ""},
 	&Instruction{ 0x99, 1, 0, 0,  false,  "enable_audio"},
 	&Instruction{ 0x9A, 0, 0, 0,  false,  "disable_audio"},
@@ -68,7 +73,16 @@ var Instructions []*Instruction = []*Instruction{
 	// loaded from the tape.
 	&Instruction{ 0x9E, 2, 0, 0,  false,  "draw_and_show_screen"},
 
-	&Instruction{ 0x9F, 6, 0, 0,  false,  ""},
+	// Source box top left
+	// ArgA: Column
+	// ArgB: Row
+	// Source box bottom Right
+	// ArgC: Column
+	// ArgD: Row
+	// Destination top left
+	// ArgE: Column
+	// ArgF: row
+	&Instruction{ 0x9F, 6, 0, 0,  false,  "copy_tiles"},
 
 	&Instruction{ 0xA0, 2, 0, 1,  false,  ""},
 
@@ -106,7 +120,12 @@ var Instructions []*Instruction = []*Instruction{
 	// Addresses in $6000-$7FFF use $470B as the bank ID
 	&Instruction{ 0xA7, 0, 0, 0,  false,   "call_asm"},
 
-	&Instruction{ 0xA8, 5, 0, 0,  false,  ""},
+	// ArgA: Envelope Loop
+	// ArgB: Constant Volume
+	// ArgC: Volume/Envelope
+	// ArgD: Noise Period
+	// ArgE: Length Counter
+	&Instruction{ 0xA8, 5, 0, 0,  false,  "play_noise"},
 
 	// Used when redrawing a portion of the screen after drawing a box or
 	// some other image on top of the background.
