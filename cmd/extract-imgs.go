@@ -219,8 +219,8 @@ func BytesToInt(raw []byte) int {
 }
 
 type DataHeader struct {
-	PaletteOffset uint16
-	ArgB uint16
+	PaletteOffset uint16 // offset from the first image header
+	ArgB uint16 // ?? unused i think?
 	ImageCount uint8
 }
 
@@ -233,8 +233,11 @@ func (h DataHeader) String() string {
 }
 
 type ImageHeader struct {
+	// in tiles
 	Width uint8
 	Height uint8
+
+	// in bytes
 	AttrLength uint16
 
 	// in pixels
