@@ -56,7 +56,9 @@ func (sb *StudyBox) rawBytes() ([]byte, error) {
 		return nil, err
 	}
 
-	err = binary.Write(buffer, binary.LittleEndian, uint32(len(sb.Audio.Data)))
+	// This length is the full size of the chunk, including the format from the
+	// switch below.
+	err = binary.Write(buffer, binary.LittleEndian, uint32(len(sb.Audio.Data)+4))
 	if err != nil {
 		return nil, err
 	}
@@ -81,8 +83,7 @@ func (sb *StudyBox) rawBytes() ([]byte, error) {
 		return nil, err
 	}
 
-	// For some reason there's 4 extra bytes. no idea why.  chomp them off.
-	_, err = buffer.Write(sb.Audio.Data[0 : uint32(len(sb.Audio.Data))-4])
+	_, err = buffer.Write(sb.Audio.Data[0 : uint32(len(sb.Audio.Data))])
 	if err != nil {
 		return nil, err
 	}
