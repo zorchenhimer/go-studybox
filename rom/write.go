@@ -18,7 +18,7 @@ func (sb *StudyBox) Write(filename string) error {
 
 	fmt.Println("Writing to " + filename)
 
-	return os.WriteFile(filename, raw, 0777)
+	return os.WriteFile(filename, raw, 0666)
 }
 
 func (sb *StudyBox) rawBytes() ([]byte, error) {
