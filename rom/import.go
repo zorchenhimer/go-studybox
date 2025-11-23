@@ -16,7 +16,7 @@ func Import(filename string) (*StudyBox, error) {
 		return nil, err
 	}
 
-	sbj := &StudyBoxJson{}
+	sbj := &StudyBoxJson{ Filename: filename }
 	err = json.Unmarshal(raw, sbj)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to unmarshal json: %v", err)
@@ -28,6 +28,7 @@ func Import(filename string) (*StudyBox, error) {
 	}
 
 	sb := &StudyBox{
+		Filename: sbj.Filename,
 		Data:  &TapeData{Pages: []*Page{}},
 		Audio: audio,
 	}

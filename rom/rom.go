@@ -8,6 +8,7 @@ import (
 )
 
 type StudyBox struct {
+	Filename string
 	Data  *TapeData
 	Audio *TapeAudio
 }

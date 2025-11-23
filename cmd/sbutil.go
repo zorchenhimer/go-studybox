@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"errors"
+	"io/fs"
 
 	"github.com/alexflint/go-arg"
 
@@ -17,7 +19,9 @@ type Arguments struct {
 }
 
 type ArgPack struct {
-	Input string `arg:"positional,required"`
+	Input  string `arg:"positional,required"`
+	Force  bool   `arg:"--force"`
+	Output string `arg:"--output,-o"`
 }
 
 type ArgUnPack struct {
@@ -73,9 +77,17 @@ func pack(args *ArgPack) error {
 
 	// TODO: put this in the json file?
 
-	outname := args.Input[:len(args.Input)-len(".json")]+".studybox"
-	fmt.Println(outname)
-	err = sb.Write(outname)
+	if args.Output != "" {
+		sb.Filename = args.Output
+	}
+
+	// outname := args.Input[:len(args.Input)-len(".json")]+".studybox"
+	if exists(sb.Filename) && !args.Force {
+		return fmt.Errorf("%s already exists or cannot be written to", sb.Filename)
+	}
+
+	fmt.Println(sb.Filename)
+	err = sb.Write(sb.Filename)
 	if err != nil {
 		return err
 	}
@@ -115,6 +127,19 @@ func unpack(args *ArgUnPack) error {
 	}
 
 	return nil
+}
+
+func exists(filename string) bool {
+	_, err := os.Stat(filename)
+	if err == nil {
+		return true
+	}
+
+	if errors.Is(err, fs.ErrNotExist) {
+		return false
+	}
+
+	return true
 }
 
 //func main_old() {
