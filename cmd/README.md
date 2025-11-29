@@ -16,6 +16,12 @@ Pack and unpack `.studybox` ROM files.  Unpacking extracts all of the data from
 the ROM into a subdirectory and writes a `.json` file with metadata.  Packing
 does the reverse using the `.json` metadata file.
 
+# sbx2wav
+
+Encode a `.studybox` ROM into a WAV audio file.  Conversion is currently a bit
+shaky and hasn't been confirmed to work on hardware.  Timing between the data
+and the recorded audio could also use a little more work.
+
 # script-decode
 
 Decode script segments from an unpacked `.studybox` ROM file.  Labels and a
