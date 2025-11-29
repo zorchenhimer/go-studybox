@@ -204,9 +204,9 @@ func (d *rawData) encode(samplesPerFlux, runningFract float64) float64 {
 		}
 	}
 
-	first := true
+	//first := true
 	for _, f := range flux {
-		amp := Amplitude
+		//amp := Amplitude
 		if f == 1 {
 			if prev <= 0 {
 				prev = 1
@@ -214,7 +214,7 @@ func (d *rawData) encode(samplesPerFlux, runningFract float64) float64 {
 				prev = -1
 			}
 			//amp = int(float64(Amplitude) * 1.5)
-			first = true
+			//first = true
 		}
 
 		//if i == 0 {
@@ -230,17 +230,17 @@ func (d *rawData) encode(samplesPerFlux, runningFract float64) float64 {
 			spf++
 		}
 
-		//d.samples = append(d.samples, slices.Repeat([]int{prev*Amplitude}, int(spf))...)
-		for i := 0; i < int(spf); i++ {
-			if first {
-				d.samples = append(d.samples, prev*int(float64(amp)*1.5))
-			}
-			d.samples = append(d.samples, prev*amp)
-			first = false
-			//amp -= 500
-		}
+		d.samples = append(d.samples, slices.Repeat([]int{prev*Amplitude}, int(spf))...)
+		//for i := 0; i < int(spf); i++ {
+		//	if first {
+		//		d.samples = append(d.samples, prev*int(float64(amp)*1.5))
+		//	}
+		//	d.samples = append(d.samples, prev*amp)
+		//	first = false
+		//	//amp -= 500
+		//}
 		//d.samples = append(d.samples, slices.Repeat([]int{prev*Amplitude}, int(samplesPerFlux))...)
-		first = false
+		//first = false
 	}
 
 	return runningFract
